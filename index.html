@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PMN03 AI 週行程排程器</title>
+</head>
+<body>
+  <div id="loading" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang TC',sans-serif;padding:24px;color:#334155">
+    正在載入 PMN03 AI 週行程排程器…
+  </div>
+  <script src="/chunks/00.js"></script>
+  <script src="/chunks/01.js"></script>
+  <script src="/chunks/02.js"></script>
+  <script>
+  (async function () {
+    try {
+      const b64 = (window.__APP_CHUNKS || []).join('');
+      if (!b64) throw new Error('找不到網站資料');
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      if (!('DecompressionStream' in window)) throw new Error('目前瀏覽器不支援解壓縮，請改用最新版 Chrome / Safari。');
+      const ds = new DecompressionStream('gzip');
+      const stream = new Blob([bytes]).stream().pipeThrough(ds);
+      const text = await new Response(stream).text();
+      document.open();
+      document.write(text);
+      document.close();
+    } catch (err) {
+      document.getElementById('loading').innerHTML =
+        '<b>載入失敗</b><br><br>' + String(err && err.message ? err.message : err);
+    }
+  })();
+  </script>
+</body>
+</html>
