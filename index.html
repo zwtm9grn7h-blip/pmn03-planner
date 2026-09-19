@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PMN03 AI 週行程排程器 v6</title>
+<title>PMN03 AI 週行程排程器 v6.1</title>
 <style>
 :root{--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;--accent:#315b8a;--accent2:#eaf1f8;--a:#b42318;--b:#b54708;--c:#067647;--shadow:0 8px 24px rgba(15,23,42,.06)}
 *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--text)}
@@ -15,7 +15,7 @@ main{max-width:1500px;margin:20px auto;padding:0 18px 50px}.panel{background:var
 .doctorsearch{position:relative}.doctorsearch input{width:100%;padding:10px 11px;border:1px solid #d1d5db;border-radius:9px;background:white;font-size:14px}.doctorresults{position:absolute;left:0;right:0;top:100%;z-index:30;background:white;border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 24px rgba(15,23,42,.12);max-height:260px;overflow:auto;margin-top:4px;display:none}.doctorresults.open{display:block}.doctoroption{padding:9px 10px;border-bottom:1px solid #f0f1f3;cursor:pointer}.doctoroption:last-child{border-bottom:0}.doctoroption b{font-size:13px}.doctoroption .small{display:block;margin-top:2px}.sourcebar{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:8px;align-items:end}.sourcebar input{width:100%;padding:10px 11px;border:1px solid #d1d5db;border-radius:9px;font-size:14px}
 @media(max-width:900px){.controls{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:repeat(5,280px)}.masterrow{grid-template-columns:1fr 1fr 1.4fr auto}.masterrow>*:nth-child(4),.masterrow>*:nth-child(5){display:none}.formgrid{grid-template-columns:1fr}}
 </style></head><body>
-<header><div class="top"><div class="title"><h1>PMN03 AI 週行程排程器</h1><p>MCCP 分級 × Call Report 延續 × 醫師搜尋 × 門診網址／圖片更新 × 每週重新排程</p></div><div class="badge">資料已載入：116 位 MCCP HCP</div></div></header>
+<header><div class="top"><div class="title"><h1>PMN03 AI 週行程排程器</h1><p>MCCP 分級 × Call Report 延續 × 醫師搜尋 × 手動門診時間 × 每週重新排程</p></div><div class="badge">資料已載入：116 位 MCCP HCP</div></div></header>
 <main>
 <section class="panel"><div class="controls">
 <div class="field"><label>週一日期</label><input id="weekStart" type="date" value="2026-09-14"></div>
@@ -29,22 +29,34 @@ main{max-width:1500px;margin:20px auto;padding:0 18px 50px}.panel{background:var
 <section class="panel"><div class="sectiontitle"><h2>更新每週資料</h2><span class="small">之後可直接丟新版 MCCP 與 Call Report，不用重做網頁</span></div><div class="controls" style="grid-template-columns:2fr 2fr 1fr"><div class="field"><label>MCCP Excel</label><input id="mccpFile" type="file" accept=".xlsx,.xls"></div><div class="field"><label>Call Report Excel</label><input id="callFile" type="file" accept=".xlsx,.xls"></div><div><button class="btn secondary" id="loadFiles">讀取新版資料</button></div></div><div id="loadStatus" class="small" style="margin-top:8px">目前使用你本次上傳的 MCCP + Call Report。</div></section>
 <section class="panel"><div class="stats"><div class="stat"><b id="sA">0</b><span>A 級</span></div><div class="stat"><b id="sB">0</b><span>B 級</span></div><div class="stat"><b id="sC">0</b><span>C 級</span></div><div class="stat"><b id="sFollow">0</b><span>有明確 Follow-up</span></div><div class="stat"><b id="sUnknown">0</b><span>尚無區域資料</span></div></div></section>
 <section class="panel"><div class="sectiontitle"><h2>客戶／診所資料庫</h2><span class="small">可手動維護診所名稱、行政區、地址與週一～週五可拜訪時間；會保存在這台瀏覽器</span></div><div class="masterbar"><input id="masterSearch" placeholder="搜尋醫師、診所、地址、行政區"><button class="btn secondary" id="addCustomer">＋ 新增臨時客戶</button><button class="btn ghost" id="exportMaster">匯出客戶主檔</button></div><div id="masterTable" class="mastertable"></div></section>
-<section class="panel" id="clinicImagePanel"><div class="sectiontitle"><h2>🩺 門診資料更新</h2><span class="small">搜尋醫師 → 貼門診網址直接讀取；圖片上傳保留為備用</span></div>
+<section class="panel" id="clinicImagePanel">
+<div class="sectiontitle"><h2>🩺 手動門診時間</h2><span class="small">搜尋醫師 → 自己輸入週一～週五門診／可拜訪時間 → 儲存</span></div>
 <div class="formgrid">
-<div class="full doctorsearch"><label>搜尋醫師／診所</label><input id="clinicDoctorSearch" autocomplete="off" placeholder="輸入醫師、診所、地區、產品或 A/B/C，例如：曹、崇光、新竹、Valdoxan"><div id="clinicDoctorResults" class="doctorresults"></div><input id="clinicSelectedIdx" type="hidden"></div>
-<div class="full"><label>門診資料網址</label><div class="sourcebar"><input id="clinicSourceUrl" type="url" placeholder="貼上診所官網、Google Maps、Facebook 或門診表網址"><button type="button" class="btn primary" id="readClinicUrl">讀取門診網址</button><button type="button" class="btn ghost" id="openClinicUrl">開啟來源</button></div><div class="small" style="margin-top:6px">網址會記在該醫師資料內。部分網站會阻擋本機 HTML 直接讀取；遇到這種情況仍可直接開啟來源，或改用下方圖片辨識。</div></div>
-<div><label>圖片備用</label><input id="clinicImage" type="file" accept="image/*"></div>
-<div><label>&nbsp;</label><button type="button" class="btn secondary" id="runOcr">辨識門診圖片</button></div>
-<div class="full"><div class="btnrow"><button type="button" class="btn primary" id="applyOcr">確認並寫入門診時間</button></div><div id="ocrStatus" class="small" style="margin-top:8px">請先搜尋並選擇醫師，再貼網址或上傳圖片。辨識結果會先讓你確認，不會直接覆蓋。</div></div>
-<div class="full"><label>圖片預覽</label><img id="clinicPreview" style="display:none;max-width:100%;max-height:360px;border:1px solid var(--line);border-radius:10px"></div>
-<div class="full"><label>擷取／OCR 原始文字（可手動修正）</label><textarea id="ocrText" rows="7" placeholder="網址或圖片辨識後文字會出現在這裡"></textarea></div>
-<div class="full"><label>辨識後門診時間（請確認）</label>
-<div class="hoursgrid"><span>週一</span><input id="ocrH0" placeholder="例如 上午 / 09:00-12:00"></div>
-<div class="hoursgrid"><span>週二</span><input id="ocrH1"></div>
-<div class="hoursgrid"><span>週三</span><input id="ocrH2"></div>
-<div class="hoursgrid"><span>週四</span><input id="ocrH3"></div>
-<div class="hoursgrid"><span>週五</span><input id="ocrH4"></div></div>
-</div></section><section class="panel"><div class="sectiontitle"><h2>本週行程</h2><div class="btnrow"><button class="btn ghost" id="reroute">只重排每日順序</button></div></div><div id="schedule" class="grid"></div></section>
+  <div class="full doctorsearch">
+    <label>搜尋醫師／診所</label>
+    <input id="clinicDoctorSearch" autocomplete="off" placeholder="輸入醫師、診所、地區、產品或 A/B/C，例如：曹、崇光、新竹、Valdoxan">
+    <div id="clinicDoctorResults" class="doctorresults"></div>
+    <input id="clinicSelectedIdx" type="hidden">
+  </div>
+  <div class="full">
+    <label>門診／可拜訪時間（完全由你手動輸入）</label>
+    <div class="small" style="margin-bottom:8px">例如：09:00-12:00、14:00-17:00、上午、下午。若只設定部分星期，系統會優先把這位醫師排在有填時間的日期。</div>
+    <div class="hoursgrid"><span>週一</span><input id="ocrH0" placeholder="例如 09:00-12:00"></div>
+    <div class="hoursgrid"><span>週二</span><input id="ocrH1" placeholder="例如 中午 / 11:30-13:30"></div>
+    <div class="hoursgrid"><span>週三</span><input id="ocrH2"></div>
+    <div class="hoursgrid"><span>週四</span><input id="ocrH3"></div>
+    <div class="hoursgrid"><span>週五</span><input id="ocrH4"></div>
+  </div>
+  <div class="full">
+    <label>拜訪時段備註</label>
+    <input id="manualVisitNote" placeholder="例如：週二中午較方便／17:30 前拜訪／需先預約">
+  </div>
+  <div class="full">
+    <div class="btnrow"><button type="button" class="btn primary" id="applyOcr">儲存門診時間</button></div>
+    <div id="ocrStatus" class="small" style="margin-top:8px">請先搜尋並選擇醫師，再輸入門診時間。</div>
+  </div>
+</div>
+</section><section class="panel"><div class="sectiontitle"><h2>本週行程</h2><div class="btnrow"><button class="btn ghost" id="reroute">只重排每日順序</button></div></div><div id="schedule" class="grid"></div></section>
 <section class="panel"><div class="sectiontitle"><h2>候補客戶池</h2><span class="small">搜尋後可替換某個時段</span></div><div class="searchrow"><input id="search" placeholder="搜尋醫師、診所、行政區、產品"><select id="gradeFilter"><option value="">全部分級</option><option>A</option><option>B</option><option>C</option></select></div><div id="pool" class="pool"></div></section>
 </main>
 <div class="modal" id="modal"><div class="modalbox"><h3 id="modalTitle">拜訪紀錄</h3><div class="small">上次醫師反饋</div><textarea id="lastFeedback" readonly></textarea><div class="small" style="margin-top:10px">本次 Pre-call Objective（可直接修改）</div><textarea id="objectiveEdit"></textarea><div class="btnrow" style="margin-top:12px"><button class="btn primary" id="saveObjective">儲存</button><button class="btn ghost" id="closeModal">關閉</button></div></div></div>
@@ -52,5 +64,4 @@ main{max-width:1500px;margin:20px auto;padding:0 18px 50px}.panel{background:var
 <script src="/data.js"></script>
 <script src="/app.js"></script>
 <script async src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script async src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </body></html>
