@@ -138,7 +138,14 @@ function exportMaster(){const rows=[['醫師','診所','行政區','診所地址
 let selectedClinicCustomerIdx=null;
 function clinicSearchHay(c){return [c.hcp,c.hco,c.area,c.address,c.product,c.grade,c.adoption].join(' ').toLowerCase()}
 function selectClinicCustomer(idx){
- const c=customers[idx]; if(!c)return; selectedClinicCustomerIdx=idx; $('#clinicSelectedIdx').value=idx; $('#clinicDoctorSearch').value=`${c.hcp}｜${c.hco}`; $('#clinicDoctorResults').classList.remove('open'); $('#clinicSourceUrl').value=c.clinicSourceUrl||''; for(let i=0;i<5;i++)$('#ocrH'+i).value=hoursText(c,i); $('#ocrStatus').textContent=`已選擇：${c.hcp}｜${c.hco}。可貼門診網址或上傳圖片。`;
+ const c=customers[idx]; if(!c)return;
+ selectedClinicCustomerIdx=idx;
+ $('#clinicSelectedIdx').value=idx;
+ $('#clinicDoctorSearch').value=`${c.hcp}｜${c.hco}`;
+ $('#clinicDoctorResults').classList.remove('open');
+ for(let i=0;i<5;i++) $('#ocrH'+i).value=hoursText(c,i);
+ if($('#manualVisitNote')) $('#manualVisitNote').value=c.visitNote||'';
+ $('#ocrStatus').textContent=`已選擇：${c.hcp}｜${c.hco}。請直接輸入週一～週五門診時間後儲存。`;
 }
 function renderClinicDoctorResults(){
  const box=$('#clinicDoctorResults'), input=$('#clinicDoctorSearch'); if(!box||!input)return; const q=input.value.trim().toLowerCase();
@@ -203,10 +210,17 @@ async function runClinicOcr(){
  }catch(e){console.error(e);st.textContent='辨識失敗：'+(e.message||e)}finally{$('#runOcr').disabled=false}
 }
 function applyClinicOcr(){
- const c=getSelectedClinicCustomer(), st=$('#ocrStatus'); if(!c){st.textContent='請先搜尋並選擇醫師。';return}
- const h={}; for(let i=0;i<5;i++)h[i]=$('#ocrH'+i).value.trim();
- if(!Object.values(h).some(Boolean)){st.textContent='目前沒有可寫入的門診時間，請先確認辨識結果。';return}
- c.hours=h; saveOverride(c); renderMaster(); render(); st.textContent='已寫入：'+c.hcp+'｜'+c.hco+'。下次自動排程會依這些門診日篩選。';
+ const c=getSelectedClinicCustomer(), st=$('#ocrStatus');
+ if(!c){st.textContent='請先搜尋並選擇醫師。';return}
+ const h={}; for(let i=0;i<5;i++) h[i]=$('#ocrH'+i).value.trim();
+ c.hours=h;
+ if($('#manualVisitNote')) c.visitNote=$('#manualVisitNote').value.trim();
+ saveOverride(c);
+ renderMaster();
+ render();
+ st.textContent=Object.values(h).some(Boolean)
+   ? '已儲存：'+c.hcp+'｜'+c.hco+'。下次自動排程會依你手動輸入的門診時間安排。'
+   : '已儲存並清除門診時間限制：'+c.hcp+'｜'+c.hco+'。';
 }
 
 const _render=render; render=function(){_render();document.querySelectorAll('.dayhead').forEach((h,i)=>{const b=document.createElement('button');b.type='button';b.className='mini';b.textContent='Google Maps';b.onclick=()=>openMaps(i);h.appendChild(b)})}
@@ -214,11 +228,8 @@ function initApp(){
  const wd=document.getElementById('weekStart'); if(wd){const now=new Date(); const day=(now.getDay()+6)%7; const mon=new Date(now); mon.setDate(now.getDate()-day); wd.value=mon.toISOString().slice(0,10);}
  $('#reroute').addEventListener('click',()=>{schedule=schedule.map(routePreserveLocks);render()});
  $('#clinicDoctorSearch')?.addEventListener('input',renderClinicDoctorResults); $('#clinicDoctorSearch')?.addEventListener('focus',renderClinicDoctorResults);
- $('#readClinicUrl')?.addEventListener('click',readClinicUrl); $('#openClinicUrl')?.addEventListener('click',openClinicUrl);
  document.addEventListener('click',e=>{if(!e.target.closest('.doctorsearch'))$('#clinicDoctorResults')?.classList.remove('open')});
- $('#runOcr')?.addEventListener('click',runClinicOcr);
  $('#applyOcr')?.addEventListener('click',applyClinicOcr);
- $('#clinicImage')?.addEventListener('change',e=>{const f=e.target.files?.[0],img=$('#clinicPreview');if(!f){img.style.display='none';return}img.src=URL.createObjectURL(f);img.style.display='block';$('#ocrStatus').textContent='圖片已載入，請按「辨識門診表」。';});
  $('#exportXlsx').addEventListener('click',exportXlsx); $('#loadFiles').addEventListener('click',loadNewFiles);
  $('#search').addEventListener('input',renderPool); $('#masterSearch').addEventListener('input',renderMaster);
  $('#addCustomer').addEventListener('click',addLocalCustomer); $('#exportMaster').addEventListener('click',exportMaster);
